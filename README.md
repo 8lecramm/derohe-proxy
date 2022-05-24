@@ -1,6 +1,6 @@
 # derohe-proxy
 
-Proxy to combine miners and to reduce network load
+Proxy to combine miners and to reduce network load.
 The proxy waits for first incoming connection and uses this wallet address for mining.
 Long To-Do list, but this release is working.
 
