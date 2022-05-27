@@ -11,7 +11,7 @@ import (
 	"github.com/deroproject/derohe/rpc"
 )
 
-func edit_blob(input []byte) (output []byte) {
+func edit_blob(input []byte, miner [32]byte) (output []byte) {
 	var err error
 	var params rpc.GetBlockTemplate_Result
 	var mbl block.MiniBlock
@@ -30,6 +30,12 @@ func edit_blob(input []byte) (output []byte) {
 		return
 	}
 
+	// Insert miner address
+	if !mbl.Final {
+		copy(mbl.KeyHash[:], miner[:])
+	}
+
+	// Insert random nonce
 	for i := range mbl.Nonce {
 		mbl.Nonce[i] = rand.Uint32()
 	}

@@ -4,6 +4,7 @@ import (
 	"derohe-proxy/proxy"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/docopt/docopt-go"
@@ -37,6 +38,21 @@ func main() {
 		daemon_address = Arguments["--daemon-address"].(string)
 	}
 
+	if Arguments["--log-interval"] != nil {
+		interval, err := strconv.ParseInt(Arguments["--log-interval"].(string), 10, 32)
+		if err != nil {
+			return
+		} else {
+			if interval < 60 || interval > 3600 {
+				log_intervall = 60
+			} else {
+				log_intervall = int(interval)
+			}
+		}
+	}
+
+	fmt.Printf("Logging every %d seconds\n", log_intervall)
+
 	go proxy.Start_server(listen_addr)
 
 	// Wait for first miner connection to grab wallet address
@@ -46,7 +62,12 @@ func main() {
 	go proxy.Start_client(daemon_address, proxy.Address)
 
 	for {
-		time.Sleep(time.Minute * 5)
-		fmt.Printf("%v %4d miners connected\t\tBlocks:%4d\tMiniblocks:%4d\tRejected:%4d\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected)
+		time.Sleep(time.Second * time.Duration(log_intervall))
+		fmt.Printf("%v %d miners connected, Bl: %d, Mbl: %d, Rej: %d\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected)
+		for i := range proxy.Wallet_count {
+			if proxy.Wallet_count[i] > 0 {
+				fmt.Printf("%v Wallet %v, %d miners\n", time.Now().Format(time.Stamp), i, proxy.Wallet_count[i])
+			}
+		}
 	}
 }

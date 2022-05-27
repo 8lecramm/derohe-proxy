@@ -32,7 +32,7 @@ func Start_client(v string, w string) {
 			InsecureSkipVerify: true,
 		}
 
-		fmt.Println(time.Now().Format(time.Stamp), "Connected to node", v, "using wallet address", w)
+		fmt.Println(time.Now().Format(time.Stamp), "Connected to node", v)
 		connection, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
 		if err != nil {
 			time.Sleep(5 * time.Second)

@@ -44,6 +44,7 @@ var client_list_mutex sync.Mutex
 var client_list = map[*websocket.Conn]*user_session{}
 
 var miners_count int
+var Wallet_count map[string]uint
 var Address string
 
 func Start_server(listen string) {
@@ -81,6 +82,8 @@ func Start_server(listen string) {
 		return
 	}
 
+	Wallet_count = make(map[string]uint)
+
 	server.Wait()
 	defer server.Stop()
 
@@ -103,7 +106,9 @@ func SendTemplateToNodes(input []byte) {
 			break
 		}
 
-		if nonce := edit_blob(input); nonce != nil {
+		miner_address := rv.address_sum
+
+		if nonce := edit_blob(input, miner_address); nonce != nil {
 			data = nonce
 		} else {
 			fmt.Println(time.Now().Format(time.Stamp), "Failed to change nonce")
@@ -151,8 +156,9 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 	client_list_mutex.Lock()
 	defer client_list_mutex.Unlock()
 	client_list[wsConn] = &session
+	Wallet_count[client_list[wsConn].address.String()]++
 	Address = address
-	fmt.Println(time.Now().Format(time.Stamp), "Incoming connection from IP:", wsConn.RemoteAddr().String())
+	fmt.Printf("%v Incoming connection: %v, Wallet: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), address)
 }
 
 // forward results to daemon
@@ -169,14 +175,15 @@ func newUpgrader() *websocket.Upgrader {
 		defer client_list_mutex.Unlock()
 
 		SendToDaemon(data)
-		fmt.Println(time.Now().Format(time.Stamp), "Submitting result from miner IP:", c.RemoteAddr().String())
+		fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
 	})
 
 	u.OnClose(func(c *websocket.Conn, err error) {
 		client_list_mutex.Lock()
 		defer client_list_mutex.Unlock()
+		Wallet_count[client_list[c].address.String()]--
+		fmt.Printf("%v Lost connection: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
 		delete(client_list, c)
-		fmt.Println(time.Now().Format(time.Stamp), "Interrupted or lost connection:", c.RemoteAddr().String())
 	})
 
 	return u
