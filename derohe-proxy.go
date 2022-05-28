@@ -51,6 +51,11 @@ func main() {
 		}
 	}
 
+	if Arguments["--minimal-jobs"] != nil {
+		minimal = true
+		fmt.Printf("Forward 2 jobs per block\n")
+	}
+
 	fmt.Printf("Logging every %d seconds\n", log_intervall)
 
 	go proxy.Start_server(listen_addr)
@@ -59,7 +64,7 @@ func main() {
 	for proxy.CountMiners() < 1 {
 		time.Sleep(time.Second * 1)
 	}
-	go proxy.Start_client(daemon_address, proxy.Address)
+	go proxy.Start_client(daemon_address, proxy.Address, minimal)
 
 	for {
 		time.Sleep(time.Second * time.Duration(log_intervall))

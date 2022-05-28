@@ -18,8 +18,10 @@ var Minis uint64
 var Rejected uint64
 
 // proxy-client
-func Start_client(v string, w string) {
+func Start_client(v string, w string, min_jobs bool) {
 	var err error
+	var last_diff uint64
+	var last_height uint64
 
 	rand.Seed(time.Now().UnixMilli())
 
@@ -60,7 +62,15 @@ func Start_client(v string, w string) {
 			Minis = params.MiniBlocks
 			Rejected = params.Rejected
 
-			go SendTemplateToNodes(recv_data)
+			if min_jobs {
+				if params.Height != last_height || params.Difficultyuint64 != last_diff {
+					last_height = params.Height
+					last_diff = params.Difficultyuint64
+					go SendTemplateToNodes(recv_data)
+				}
+			} else {
+				go SendTemplateToNodes(recv_data)
+			}
 		}
 	}
 }
