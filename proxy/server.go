@@ -100,6 +100,9 @@ func CountMiners() int {
 func SendTemplateToNodes(input []byte) {
 	var data []byte
 
+	client_list_mutex.Lock()
+	defer client_list_mutex.Unlock()
+
 	for rk, rv := range client_list {
 
 		if client_list == nil {
