@@ -51,7 +51,7 @@ func main() {
 		}
 	}
 
-	if Arguments["--minimal-jobs"] != nil {
+	if Arguments["--minimal-jobs"].(bool) {
 		minimal = true
 		fmt.Printf("Forward 2 jobs per block\n")
 	}
