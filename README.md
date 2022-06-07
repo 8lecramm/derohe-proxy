@@ -6,7 +6,7 @@ Long To-Do list, but this is a working release.
 **Features**
 - random nonces
 - muliple wallets are supported
-- notification of incoming / lost connections
+- notification of incoming and lost connections / submitted results / stats
 - user-defined logging interval
 
 **Usage**
@@ -18,3 +18,7 @@ derohe-proxy [--listen-address=<127.0.0.1:10100>] [--log-interval=<60>] --daemon
 --daemon-address: address:port of daemon
 
 --log-interval (optional): logging every X seconds, default is 60 seconds
+
+--minimal-jobs (optional): forward only 2 jobs per block (1 for first 9 miniblocks, 1 for final miniblock)
+
+--nonce (optional): enable random nonces, disabled by default
