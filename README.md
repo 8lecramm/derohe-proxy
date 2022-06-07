@@ -19,6 +19,6 @@ derohe-proxy [--listen-address=<127.0.0.1:10100>] [--log-interval=<60>] --daemon
 
 --log-interval (optional): logging every X seconds, default is 60 seconds
 
---minimal-jobs (optional): forward only 2 jobs per block (1 for first 9 miniblocks, 1 for final miniblock)
+--minimal (optional): forward only 2 jobs per block (1 for first 9 miniblocks, 1 for final miniblock)
 
 --nonce (optional): enable random nonces, disabled by default
