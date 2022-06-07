@@ -51,12 +51,17 @@ func main() {
 		}
 	}
 
-	if Arguments["--minimal-jobs"].(bool) {
+	if Arguments["--minimal"].(bool) {
 		minimal = true
-		fmt.Printf("Forward 2 jobs per block\n")
+		fmt.Printf("%v Forward only 2 jobs per block\n", time.Now().Format(time.Stamp))
 	}
 
-	fmt.Printf("Logging every %d seconds\n", log_intervall)
+	if Arguments["--nonce"].(bool) {
+		nonce = true
+		fmt.Printf("%v Nonce editing is enabled\n", time.Now().Format(time.Stamp))
+	}
+
+	fmt.Printf("%v Logging every %d seconds\n", time.Now().Format(time.Stamp), log_intervall)
 
 	go proxy.Start_server(listen_addr)
 
@@ -64,13 +69,13 @@ func main() {
 	for proxy.CountMiners() < 1 {
 		time.Sleep(time.Second * 1)
 	}
-	go proxy.Start_client(daemon_address, proxy.Address, minimal)
+	go proxy.Start_client(daemon_address, proxy.Address, minimal, nonce)
 
 	for {
 		time.Sleep(time.Second * time.Duration(log_intervall))
 		fmt.Printf("%v %d miners connected, Bl: %d, Mbl: %d, Rej: %d\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected)
 		for i := range proxy.Wallet_count {
-			if proxy.Wallet_count[i] > 0 {
+			if proxy.Wallet_count[i] > 1 {
 				fmt.Printf("%v Wallet %v, %d miners\n", time.Now().Format(time.Stamp), i, proxy.Wallet_count[i])
 			}
 		}

@@ -11,7 +11,7 @@ import (
 	"github.com/deroproject/derohe/rpc"
 )
 
-func edit_blob(input []byte, miner [32]byte) (output []byte) {
+func edit_blob(input []byte, miner [32]byte, nonce bool) (output []byte) {
 	var err error
 	var params rpc.GetBlockTemplate_Result
 	var mbl block.MiniBlock
@@ -36,10 +36,13 @@ func edit_blob(input []byte, miner [32]byte) (output []byte) {
 	}
 
 	// Insert random nonce
-	for i := range mbl.Nonce {
-		mbl.Nonce[i] = rand.Uint32()
+	if nonce {
+		for i := range mbl.Nonce {
+			mbl.Nonce[i] = rand.Uint32()
+		}
 	}
-	mbl.Flags = rand.Uint32()
+
+	mbl.Flags = 3735928559 // ;)
 
 	params.Blockhashing_blob = fmt.Sprintf("%x", mbl.Serialize())
 	encoder := json.NewEncoder(&out)

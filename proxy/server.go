@@ -97,8 +97,7 @@ func CountMiners() int {
 }
 
 // forward all incoming templates from daemon to all miners
-func SendTemplateToNodes(input []byte) {
-	var data []byte
+func SendTemplateToNodes(data []byte, nonce bool) {
 
 	client_list_mutex.Lock()
 	defer client_list_mutex.Unlock()
@@ -111,11 +110,10 @@ func SendTemplateToNodes(input []byte) {
 
 		miner_address := rv.address_sum
 
-		if nonce := edit_blob(input, miner_address); nonce != nil {
-			data = nonce
+		if result := edit_blob(data, miner_address, nonce); result != nil {
+			data = result
 		} else {
-			fmt.Println(time.Now().Format(time.Stamp), "Failed to change nonce")
-			data = input
+			fmt.Println(time.Now().Format(time.Stamp), "Failed to change nonce / miner keyhash")
 		}
 
 		go func(k *websocket.Conn, v *user_session) {
@@ -185,7 +183,7 @@ func newUpgrader() *websocket.Upgrader {
 		client_list_mutex.Lock()
 		defer client_list_mutex.Unlock()
 		Wallet_count[client_list[c].address.String()]--
-		fmt.Printf("%v Lost connection: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+		fmt.Printf("%v Lost connection: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String())
 		delete(client_list, c)
 	})
 

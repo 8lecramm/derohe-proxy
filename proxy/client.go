@@ -18,7 +18,7 @@ var Minis uint64
 var Rejected uint64
 
 // proxy-client
-func Start_client(v string, w string, min_jobs bool) {
+func Start_client(v string, w string, min_jobs bool, nonce bool) {
 	var err error
 	var last_diff uint64
 	var last_height uint64
@@ -66,10 +66,10 @@ func Start_client(v string, w string, min_jobs bool) {
 				if params.Height != last_height || params.Difficultyuint64 != last_diff {
 					last_height = params.Height
 					last_diff = params.Difficultyuint64
-					go SendTemplateToNodes(recv_data)
+					go SendTemplateToNodes(recv_data, nonce)
 				}
 			} else {
-				go SendTemplateToNodes(recv_data)
+				go SendTemplateToNodes(recv_data, nonce)
 			}
 		}
 	}
