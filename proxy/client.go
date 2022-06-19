@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/url"
 	"time"
 
@@ -22,8 +21,6 @@ func Start_client(v string, w string, min_jobs bool, nonce bool) {
 	var err error
 	var last_diff uint64
 	var last_height uint64
-
-	rand.Seed(time.Now().UnixMilli())
 
 	for {
 

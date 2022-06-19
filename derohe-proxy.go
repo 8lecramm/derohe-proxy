@@ -51,14 +51,16 @@ func main() {
 		}
 	}
 
-	if Arguments["--minimal"].(bool) {
-		minimal = true
-		fmt.Printf("%v Forward only 2 jobs per block\n", time.Now().Format(time.Stamp))
-	}
-
 	if Arguments["--nonce"].(bool) {
 		nonce = true
+		minimal = true
 		fmt.Printf("%v Nonce editing is enabled\n", time.Now().Format(time.Stamp))
+		fmt.Printf("%v Switch to >minimal< mode\n", time.Now().Format(time.Stamp))
+	}
+
+	if Arguments["--minimal"].(bool) && !Arguments["--nonce"].(bool) {
+		minimal = true
+		fmt.Printf("%v Forward only 2 jobs per block\n", time.Now().Format(time.Stamp))
 	}
 
 	fmt.Printf("%v Logging every %d seconds\n", time.Now().Format(time.Stamp), log_intervall)

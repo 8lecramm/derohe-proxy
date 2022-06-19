@@ -5,6 +5,8 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -14,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deroproject/derohe/block"
 	"github.com/deroproject/derohe/globals"
 	"github.com/deroproject/derohe/rpc"
 	"github.com/deroproject/graviton"
@@ -46,6 +49,7 @@ var client_list = map[*websocket.Conn]*user_session{}
 var miners_count int
 var Wallet_count map[string]uint
 var Address string
+var Found nonce_store
 
 func Start_server(listen string) {
 	var err error
@@ -168,6 +172,8 @@ func newUpgrader() *websocket.Upgrader {
 
 	u.OnMessage(func(c *websocket.Conn, messageType websocket.MessageType, data []byte) {
 
+		var params rpc.SubmitBlock_Params
+
 		if messageType != websocket.TextMessage {
 			return
 		}
@@ -177,6 +183,16 @@ func newUpgrader() *websocket.Upgrader {
 
 		SendToDaemon(data)
 		fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+		// Store nonce
+		if err := json.Unmarshal(data, &params); err == nil {
+			Found.RLock()
+			var mbl []byte
+			mbl, _ = hex.DecodeString(params.MiniBlockhashing_blob)
+			Found.timestamp = time.Now()
+			copy(Found.nonce[:], mbl[block.MINIBLOCK_SIZE-8:block.MINIBLOCK_SIZE])
+			fmt.Printf("%v Nonce %x, timestamp %v\n", time.Now().Format(time.Stamp), Found.nonce, Found.timestamp.Format(time.Stamp))
+			Found.RUnlock()
+		}
 	})
 
 	u.OnClose(func(c *websocket.Conn, err error) {
