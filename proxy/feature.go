@@ -49,7 +49,7 @@ func edit_blob(input []byte, miner [32]byte, nonce bool) (output []byte) {
 		var qnonce [8]byte
 		Found.Lock()
 		// send nonce pattern to all nodes, lasts for 2 hours or until another nonce has been found
-		// TODO: add command argument
+		// TODO: add command argument and switch to random data pool
 		if binary.BigEndian.Uint64(Found.nonce[:]) > 0 && time.Now().Sub(Found.timestamp) < time.Hour*2 {
 			copy(qnonce[:], Found.nonce[:])
 			qrand.Read(qnonce[0:2])
