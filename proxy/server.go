@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -36,9 +37,21 @@ type user_session struct {
 	miniblocks    uint64
 	lasterr       string
 	address       rpc.Address
+	orphans       uint64
+	hashrate      float64
 	valid_address bool
 	address_sum   [32]byte
 }
+
+type ( // array without name containing block template in hex
+	MinerInfo_Params struct {
+		Wallet_Address string  `json:"wallet_address"`
+		Miner_Tag      string  `json:"miner_tag"`
+		Miner_Hashrate float64 `json:"miner_hashrate"`
+	}
+	MinerInfo_Result struct {
+	}
+)
 
 var client_list_mutex sync.Mutex
 var client_list = map[*websocket.Conn]*user_session{}
@@ -175,8 +188,27 @@ func newUpgrader() *websocket.Upgrader {
 		client_list_mutex.Lock()
 		defer client_list_mutex.Unlock()
 
-		SendToDaemon(data)
-		fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+		var x MinerInfo_Params
+		if json.Unmarshal(data, &x); len(x.Wallet_Address) > 0 {
+
+			if x.Miner_Hashrate > 0 {
+				sess := client_list[c]
+				sess.hashrate = x.Miner_Hashrate
+				client_list[c] = sess
+			}
+
+			var NewHashRate float64
+			for _, s := range client_list {
+				NewHashRate += s.hashrate
+			}
+			Hashrate = NewHashRate
+
+			// Update miners information
+			return
+		} else {
+			go SendToDaemon(data)
+			fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+		}
 	})
 
 	u.OnClose(func(c *websocket.Conn, err error) {
