@@ -74,7 +74,23 @@ func main() {
 
 	for {
 		time.Sleep(time.Second * time.Duration(log_intervall))
-		fmt.Printf("%v %d miners connected, Bl: %d, Mbl: %d, Rej: %d\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected)
+
+		hash_rate_string := ""
+
+		switch {
+		case proxy.Hashrate > 1000000000000:
+			hash_rate_string = fmt.Sprintf("%.3f TH/s", float64(proxy.Hashrate)/1000000000000.0)
+		case proxy.Hashrate > 1000000000:
+			hash_rate_string = fmt.Sprintf("%.3f GH/s", float64(proxy.Hashrate)/1000000000.0)
+		case proxy.Hashrate > 1000000:
+			hash_rate_string = fmt.Sprintf("%.3f MH/s", float64(proxy.Hashrate)/1000000.0)
+		case proxy.Hashrate > 1000:
+			hash_rate_string = fmt.Sprintf("%.3f KH/s", float64(proxy.Hashrate)/1000.0)
+		case proxy.Hashrate > 0:
+			hash_rate_string = fmt.Sprintf("%d H/s", int(proxy.Hashrate))
+		}
+
+		fmt.Printf("%v %d miners connected, IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
 		for i := range proxy.Wallet_count {
 			if proxy.Wallet_count[i] > 1 {
 				fmt.Printf("%v Wallet %v, %d miners\n", time.Now().Format(time.Stamp), i, proxy.Wallet_count[i])
