@@ -8,14 +8,41 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/deroproject/derohe/rpc"
 	"github.com/gorilla/websocket"
+)
+
+type (
+	GetBlockTemplate_Params struct {
+		Wallet_Address string `json:"wallet_address"`
+		Block          bool   `json:"block"`
+		Miner          string `json:"miner"`
+	}
+	GetBlockTemplate_Result struct {
+		JobID              string `json:"jobid"`
+		Blocktemplate_blob string `json:"blocktemplate_blob,omitempty"`
+		Blockhashing_blob  string `json:"blockhashing_blob,omitempty"`
+		Difficulty         string `json:"difficulty"`
+		Difficultyuint64   uint64 `json:"difficultyuint64"`
+		Height             uint64 `json:"height"`
+		Prev_Hash          string `json:"prev_hash"`
+		EpochMilli         uint64 `json:"epochmilli"`
+		Blocks             uint64 `json:"blocks"`     // number of blocks found
+		MiniBlocks         uint64 `json:"miniblocks"` // number of miniblocks found
+		Rejected           uint64 `json:"rejected"`   // reject count
+		LastError          string `json:"lasterror"`  // last error
+		Status             string `json:"status"`
+		Orphans            uint64 `json:"orphans"`
+		Hansen33Mod        bool   `json:"hansen33_mod"`
+	}
 )
 
 var connection *websocket.Conn
 var Blocks uint64
 var Minis uint64
 var Rejected uint64
+var Orphans uint64
+var ModdedNode bool = false
+var Hashrate float64
 
 // proxy-client
 func Start_client(v string, w string, min_jobs bool, nonce bool) {
@@ -42,7 +69,7 @@ func Start_client(v string, w string, min_jobs bool, nonce bool) {
 			continue
 		}
 
-		var params rpc.GetBlockTemplate_Result
+		var params GetBlockTemplate_Result
 
 		for {
 			msg_type, recv_data, err := connection.ReadMessage()
@@ -61,7 +88,18 @@ func Start_client(v string, w string, min_jobs bool, nonce bool) {
 			Blocks = params.Blocks
 			Minis = params.MiniBlocks
 			Rejected = params.Rejected
+			Orphans = params.Orphans
 
+			if ModdedNode != params.Hansen33Mod {
+				if params.Hansen33Mod {
+					fmt.Print("Hansen33 Mod Mining Node Detected - Happy Mining\n")
+				}
+			}
+			ModdedNode = params.Hansen33Mod
+
+			if !ModdedNode {
+				fmt.Print("Official Mining Node Detected - Happy Mining\n")
+			}
 			if min_jobs {
 				if params.Height != last_height || params.Difficultyuint64 != last_diff {
 					last_height = params.Height
@@ -72,6 +110,23 @@ func Start_client(v string, w string, min_jobs bool, nonce bool) {
 				go SendTemplateToNodes(recv_data, nonce)
 			}
 		}
+	}
+}
+
+func SendUpdateToDaemon() {
+
+	var count = 0
+	for {
+		if ModdedNode {
+			if count == 0 {
+				time.Sleep(60 * time.Second)
+			}
+
+			connection.WriteJSON(MinerInfo_Params{Wallet_Address: Address, Miner_Tag: "", Miner_Hashrate: Hashrate})
+
+			count++
+		}
+		time.Sleep(10 * time.Second)
 	}
 }
 

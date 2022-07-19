@@ -8,12 +8,11 @@ import (
 	"math/rand"
 
 	"github.com/deroproject/derohe/block"
-	"github.com/deroproject/derohe/rpc"
 )
 
 func edit_blob(input []byte, miner [32]byte, nonce bool) (output []byte) {
 	var err error
-	var params rpc.GetBlockTemplate_Result
+	var params GetBlockTemplate_Result
 	var mbl block.MiniBlock
 	var raw_hex []byte
 	var out bytes.Buffer
