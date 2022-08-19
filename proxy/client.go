@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"time"
 
+	"derohe-proxy/config"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -45,7 +47,7 @@ var ModdedNode bool = false
 var Hashrate float64
 
 // proxy-client
-func Start_client(v string, w string, min_jobs bool, nonce bool) {
+func Start_client(w string) {
 	var err error
 	var last_diff uint64
 	var last_height uint64
@@ -54,14 +56,18 @@ func Start_client(v string, w string, min_jobs bool, nonce bool) {
 
 	for {
 
-		u := url.URL{Scheme: "wss", Host: v, Path: "/ws/" + w}
+		u := url.URL{Scheme: "wss", Host: config.Daemon_address, Path: "/ws/" + w}
 
 		dialer := websocket.DefaultDialer
 		dialer.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
 
-		fmt.Println(time.Now().Format(time.Stamp), "Connected to node", v)
+		if !config.Pool_mode {
+			fmt.Printf("%v Connected to node %v\n", time.Now().Format(time.Stamp), config.Daemon_address)
+		} else {
+			fmt.Printf("%v Connected to node %v using wallet %v\n", time.Now().Format(time.Stamp), config.Daemon_address, w)
+		}
 		connection, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
 		if err != nil {
 			time.Sleep(5 * time.Second)
@@ -92,22 +98,22 @@ func Start_client(v string, w string, min_jobs bool, nonce bool) {
 
 			if ModdedNode != params.Hansen33Mod {
 				if params.Hansen33Mod {
-					fmt.Print("Hansen33 Mod Mining Node Detected - Happy Mining\n")
+					fmt.Printf("%v Hansen33 Mod Mining Node Detected - Happy Mining\n", time.Now().Format(time.Stamp))
 				}
 			}
 			ModdedNode = params.Hansen33Mod
 
 			if !ModdedNode {
-				fmt.Print("Official Mining Node Detected - Happy Mining\n")
+				fmt.Printf("%v Official Mining Node Detected - Happy Mining\n", time.Now().Format(time.Stamp))
 			}
-			if min_jobs {
+			if config.Minimal {
 				if params.Height != last_height || params.Difficultyuint64 != last_diff {
 					last_height = params.Height
 					last_diff = params.Difficultyuint64
-					go SendTemplateToNodes(recv_data, nonce)
+					go SendTemplateToNodes(recv_data)
 				}
 			} else {
-				go SendTemplateToNodes(recv_data, nonce)
+				go SendTemplateToNodes(recv_data)
 			}
 		}
 	}

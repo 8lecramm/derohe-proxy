@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"derohe-proxy/config"
+
 	"github.com/deroproject/derohe/globals"
 	"github.com/deroproject/derohe/rpc"
 	"github.com/deroproject/graviton"
@@ -57,10 +59,11 @@ var client_list_mutex sync.Mutex
 var client_list = map[*websocket.Conn]*user_session{}
 
 var miners_count int
+var shares uint64
 var Wallet_count map[string]uint
 var Address string
 
-func Start_server(listen string) {
+func Start_server() {
 	var err error
 
 	tlsConfig := &tls.Config{
@@ -74,7 +77,7 @@ func Start_server(listen string) {
 	server = nbhttp.NewServer(nbhttp.Config{
 		Name:                    "GETWORK",
 		Network:                 "tcp",
-		AddrsTLS:                []string{listen},
+		AddrsTLS:                []string{config.Listen_addr},
 		TLSConfig:               tlsConfig,
 		Handler:                 mux,
 		MaxLoad:                 10 * 1024,
@@ -110,7 +113,7 @@ func CountMiners() int {
 }
 
 // forward all incoming templates from daemon to all miners
-func SendTemplateToNodes(data []byte, nonce bool) {
+func SendTemplateToNodes(data []byte) {
 
 	client_list_mutex.Lock()
 	defer client_list_mutex.Unlock()
@@ -121,12 +124,14 @@ func SendTemplateToNodes(data []byte, nonce bool) {
 			break
 		}
 
-		miner_address := rv.address_sum
+		if !config.Pool_mode {
+			miner_address := rv.address_sum
 
-		if result := edit_blob(data, miner_address, nonce); result != nil {
-			data = result
-		} else {
-			fmt.Println(time.Now().Format(time.Stamp), "Failed to change nonce / miner keyhash")
+			if result := edit_blob(data, miner_address, config.Nonce); result != nil {
+				data = result
+			} else {
+				fmt.Println(time.Now().Format(time.Stamp), "Failed to change nonce / miner keyhash")
+			}
 		}
 
 		go func(k *websocket.Conn, v *user_session) {
@@ -137,7 +142,6 @@ func SendTemplateToNodes(data []byte, nonce bool) {
 		}(rk, rv)
 
 	}
-
 }
 
 // handling for incoming miner connections
@@ -172,7 +176,11 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 	client_list[wsConn] = &session
 	Wallet_count[client_list[wsConn].address.String()]++
 	Address = address
-	fmt.Printf("%v Incoming connection: %v, Wallet: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), address)
+	if !config.Pool_mode {
+		fmt.Printf("%v Incoming connection: %v, Wallet: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), address)
+	} else {
+		fmt.Printf("%v Incoming connection: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String())
+	}
 }
 
 // forward results to daemon
@@ -207,7 +215,12 @@ func newUpgrader() *websocket.Upgrader {
 			return
 		} else {
 			go SendToDaemon(data)
-			fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+			if !config.Pool_mode {
+				fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+			} else {
+				shares++
+				fmt.Printf("%v Shares submitted: %d\n", time.Now().Format(time.Stamp), shares)
+			}
 		}
 	})
 

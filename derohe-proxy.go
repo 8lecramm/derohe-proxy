@@ -1,10 +1,12 @@
 package main
 
 import (
+	"derohe-proxy/config"
 	"derohe-proxy/proxy"
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/docopt/docopt-go"
@@ -12,68 +14,75 @@ import (
 
 func main() {
 	var err error
+	var rwmutex sync.RWMutex
 
-	Arguments, err = docopt.Parse(command_line, nil, true, "pre-alpha", false)
+	config.Arguments, err = docopt.Parse(config.Command_line, nil, true, "pre-alpha", false)
 
 	if err != nil {
 		return
 	}
 
-	if Arguments["--listen-address"] != nil {
-		addr, err := net.ResolveTCPAddr("tcp", Arguments["--listen-address"].(string))
+	if config.Arguments["--listen-address"] != nil {
+		addr, err := net.ResolveTCPAddr("tcp", config.Arguments["--listen-address"].(string))
 		if err != nil {
 			return
 		} else {
 			if addr.Port == 0 {
 				return
 			} else {
-				listen_addr = addr.String()
+				config.Listen_addr = addr.String()
 			}
 		}
 	}
 
-	if Arguments["--daemon-address"] == nil {
+	if config.Arguments["--daemon-address"] == nil {
 		return
 	} else {
-		daemon_address = Arguments["--daemon-address"].(string)
+		config.Daemon_address = config.Arguments["--daemon-address"].(string)
 	}
 
-	if Arguments["--log-interval"] != nil {
-		interval, err := strconv.ParseInt(Arguments["--log-interval"].(string), 10, 32)
+	if config.Arguments["--log-interval"] != nil {
+		interval, err := strconv.ParseInt(config.Arguments["--log-interval"].(string), 10, 32)
 		if err != nil {
 			return
 		} else {
 			if interval < 60 || interval > 3600 {
-				log_intervall = 60
+				config.Log_intervall = 60
 			} else {
-				log_intervall = int(interval)
+				config.Log_intervall = int(interval)
 			}
 		}
 	}
 
-	if Arguments["--minimal"].(bool) {
-		minimal = true
+	if config.Arguments["--minimal"].(bool) {
+		config.Minimal = true
 		fmt.Printf("%v Forward only 2 jobs per block\n", time.Now().Format(time.Stamp))
 	}
 
-	if Arguments["--nonce"].(bool) {
-		nonce = true
+	if config.Arguments["--nonce"].(bool) {
+		config.Nonce = true
 		fmt.Printf("%v Nonce editing is enabled\n", time.Now().Format(time.Stamp))
 	}
 
-	fmt.Printf("%v Logging every %d seconds\n", time.Now().Format(time.Stamp), log_intervall)
+	if config.Arguments["--pool"].(bool) {
+		config.Pool_mode = true
+		config.Minimal = false
+		fmt.Printf("%v Pool mode is enabled\n", time.Now().Format(time.Stamp))
+	}
 
-	go proxy.Start_server(listen_addr)
+	fmt.Printf("%v Logging every %d seconds\n", time.Now().Format(time.Stamp), config.Log_intervall)
+
+	go proxy.Start_server()
 
 	// Wait for first miner connection to grab wallet address
 	for proxy.CountMiners() < 1 {
 		time.Sleep(time.Second * 1)
 	}
-	go proxy.Start_client(daemon_address, proxy.Address, minimal, nonce)
+	go proxy.Start_client(proxy.Address)
 	go proxy.SendUpdateToDaemon()
 
 	for {
-		time.Sleep(time.Second * time.Duration(log_intervall))
+		time.Sleep(time.Second * time.Duration(config.Log_intervall))
 
 		hash_rate_string := ""
 
@@ -90,11 +99,17 @@ func main() {
 			hash_rate_string = fmt.Sprintf("%d H/s", int(proxy.Hashrate))
 		}
 
-		fmt.Printf("%v %d miners connected, IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
+		if !config.Pool_mode {
+			fmt.Printf("%v %d miners connected, IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
+		} else {
+			fmt.Printf("%v %d miners connected, Pool stats: IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
+		}
+		rwmutex.RLock()
 		for i := range proxy.Wallet_count {
 			if proxy.Wallet_count[i] > 1 {
 				fmt.Printf("%v Wallet %v, %d miners\n", time.Now().Format(time.Stamp), i, proxy.Wallet_count[i])
 			}
 		}
+		rwmutex.RUnlock()
 	}
 }
