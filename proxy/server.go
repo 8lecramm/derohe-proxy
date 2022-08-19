@@ -214,7 +214,7 @@ func newUpgrader() *websocket.Upgrader {
 			// Update miners information
 			return
 		} else {
-			go SendToDaemon(data)
+			SendToDaemon(data)
 			if !config.Pool_mode {
 				fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
 			} else {
