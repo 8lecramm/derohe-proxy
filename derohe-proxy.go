@@ -79,7 +79,7 @@ func main() {
 		time.Sleep(time.Second * 1)
 	}
 	go proxy.Start_client(proxy.Address)
-	go proxy.SendUpdateToDaemon()
+	//go proxy.SendUpdateToDaemon()
 
 	for {
 		time.Sleep(time.Second * time.Duration(config.Log_intervall))

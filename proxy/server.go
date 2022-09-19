@@ -5,7 +5,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -196,32 +195,34 @@ func newUpgrader() *websocket.Upgrader {
 		client_list_mutex.Lock()
 		defer client_list_mutex.Unlock()
 
-		var x MinerInfo_Params
-		if json.Unmarshal(data, &x); len(x.Wallet_Address) > 0 {
+		/*
+			var x MinerInfo_Params
+			if json.Unmarshal(data, &x); len(x.Wallet_Address) > 0 {
 
-			if x.Miner_Hashrate > 0 {
-				sess := client_list[c]
-				sess.hashrate = x.Miner_Hashrate
-				client_list[c] = sess
-			}
+				if x.Miner_Hashrate > 0 {
+					sess := client_list[c]
+					sess.hashrate = x.Miner_Hashrate
+					client_list[c] = sess
+				}
 
-			var NewHashRate float64
-			for _, s := range client_list {
-				NewHashRate += s.hashrate
-			}
-			Hashrate = NewHashRate
+				var NewHashRate float64
+				for _, s := range client_list {
+					NewHashRate += s.hashrate
+				}
+				Hashrate = NewHashRate
 
-			// Update miners information
-			return
-		} else {
-			SendToDaemon(data)
-			if !config.Pool_mode {
-				fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+				// Update miners information
+				return
 			} else {
-				shares++
-				fmt.Printf("%v Shares submitted: %d\n", time.Now().Format(time.Stamp), shares)
-			}
+		*/
+		SendToDaemon(data)
+		if !config.Pool_mode {
+			fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+		} else {
+			shares++
+			fmt.Printf("%v Shares submitted: %d\n", time.Now().Format(time.Stamp), shares)
 		}
+		//}
 	})
 
 	u.OnClose(func(c *websocket.Conn, err error) {
