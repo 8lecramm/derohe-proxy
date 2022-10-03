@@ -175,6 +175,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	client_list[wsConn] = &session
 	Wallet_count[client_list[wsConn].address.String()]++
+<<<<<<< HEAD
 
 	if config.WalletAddr != "" {
 		Address = config.WalletAddr
@@ -182,6 +183,9 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 		Address = address
 	}
 
+=======
+	Address = address
+>>>>>>> efc773ca517eef878cf0059f84c7c02212473e1c
 	if !config.Pool_mode {
 		fmt.Printf("%v Incoming connection: %v, Wallet: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), address)
 	} else {
