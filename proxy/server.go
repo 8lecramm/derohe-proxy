@@ -38,6 +38,7 @@ type user_session struct {
 	miniblocks    uint64
 	lasterr       string
 	address       rpc.Address
+	worker        string
 	orphans       uint64
 	hashrate      float64
 	valid_address bool
@@ -80,7 +81,7 @@ func Start_server() {
 		TLSConfig:               tlsConfig,
 		Handler:                 mux,
 		MaxLoad:                 10 * 1024,
-		MaxWriteBufferSize:      32 * 1024,
+		MaxWriteBufferSize:      5 * 1024 * 1024,
 		ReleaseWebsocketPayload: true,
 		KeepaliveTime:           240 * time.Hour, // we expects all miners to find a block every 10 days,
 		NPoller:                 runtime.NumCPU(),
@@ -107,7 +108,9 @@ func Start_server() {
 func CountMiners() int {
 	client_list_mutex.Lock()
 	defer client_list_mutex.Unlock()
+
 	miners_count = len(client_list)
+
 	return miners_count
 }
 
@@ -151,6 +154,15 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 	address := strings.TrimPrefix(r.URL.Path, "/ws/")
 
+	// check for worker suffix
+	var parseWorker []string
+	var worker string
+	if strings.Contains(address, ".") {
+		parseWorker = strings.Split(address, ".")
+		worker = parseWorker[1]
+		address = parseWorker[0]
+	}
+
 	addr, err := globals.ParseValidateAddress(address)
 	if err != nil {
 		fmt.Fprintf(w, "err: %s\n", err)
@@ -167,7 +179,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 	addr_raw := addr.PublicKey.EncodeCompressed()
 	wsConn := conn.(*websocket.Conn)
 
-	session := user_session{address: *addr, address_sum: graviton.Sum(addr_raw)}
+	session := user_session{address: *addr, address_sum: graviton.Sum(addr_raw), worker: worker}
 	wsConn.SetSession(&session)
 
 	client_list_mutex.Lock()
@@ -183,9 +195,9 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !config.Pool_mode {
-		fmt.Printf("%v Incoming connection: %v, Wallet: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), address)
+		fmt.Printf("%v Incoming connection: %v (%v), Wallet: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), worker, address)
 	} else {
-		fmt.Printf("%v Incoming connection: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String())
+		fmt.Printf("%v Incoming connection: %v (%v)\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), worker)
 	}
 }
 
@@ -224,7 +236,7 @@ func newUpgrader() *websocket.Upgrader {
 		*/
 		SendToDaemon(data)
 		if !config.Pool_mode {
-			fmt.Printf("%v Submitting result from miner: %v, Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].address.String())
+			fmt.Printf("%v Submitting result from miner: %v (%v), Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].worker, client_list[c].address.String())
 		} else {
 			shares++
 			fmt.Printf("%v Shares submitted: %d\n", time.Now().Format(time.Stamp), shares)
@@ -236,7 +248,7 @@ func newUpgrader() *websocket.Upgrader {
 		client_list_mutex.Lock()
 		defer client_list_mutex.Unlock()
 		Wallet_count[client_list[c].address.String()]--
-		fmt.Printf("%v Lost connection: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String())
+		fmt.Printf("%v Lost connection: %v (%v)\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].worker)
 		delete(client_list, c)
 	})
 

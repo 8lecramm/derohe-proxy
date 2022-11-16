@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"sync"
 	"time"
 
 	"derohe-proxy/config"
@@ -38,7 +39,12 @@ type (
 	}
 )
 
-var connection *websocket.Conn
+type clientConn struct {
+	conn *websocket.Conn
+	sync.Mutex
+}
+
+var connection clientConn
 var Blocks uint64
 var Minis uint64
 var Rejected uint64
@@ -68,7 +74,7 @@ func Start_client(w string) {
 		} else {
 			fmt.Printf("%v Connected to node %v using wallet %v\n", time.Now().Format(time.Stamp), config.Daemon_address, w)
 		}
-		connection, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
+		connection.conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
 		if err != nil {
 			time.Sleep(5 * time.Second)
 			fmt.Println(err)
@@ -78,7 +84,7 @@ func Start_client(w string) {
 		var params GetBlockTemplate_Result
 
 		for {
-			msg_type, recv_data, err := connection.ReadMessage()
+			msg_type, recv_data, err := connection.conn.ReadMessage()
 			if err != nil {
 				break
 			}
@@ -128,7 +134,7 @@ func SendUpdateToDaemon() {
 				time.Sleep(60 * time.Second)
 			}
 
-			connection.WriteJSON(MinerInfo_Params{Wallet_Address: Address, Miner_Tag: "", Miner_Hashrate: Hashrate})
+			connection.conn.WriteJSON(MinerInfo_Params{Wallet_Address: Address, Miner_Tag: "", Miner_Hashrate: Hashrate})
 
 			count++
 		}
@@ -137,5 +143,9 @@ func SendUpdateToDaemon() {
 }
 
 func SendToDaemon(buffer []byte) {
-	connection.WriteMessage(websocket.TextMessage, buffer)
+	connection.Lock()
+	defer connection.Unlock()
+
+	connection.conn.WriteMessage(websocket.TextMessage, buffer)
+
 }

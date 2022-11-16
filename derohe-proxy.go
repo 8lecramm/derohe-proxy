@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deroproject/derohe/globals"
 	"github.com/docopt/docopt-go"
 )
 
@@ -42,7 +43,11 @@ func main() {
 	}
 
 	if config.Arguments["--wallet-address"] != nil {
-		config.WalletAddr = config.Arguments["--wallet-address"].(string)
+		addr, err := globals.ParseValidateAddress(config.Arguments["--wallet-address"].(string))
+		if err != nil {
+			fmt.Printf("%v Wallet address is invalid!\n", time.Now().Format(time.Stamp))
+		}
+		config.WalletAddr = addr.String()
 		fmt.Printf("%v Using wallet %s for all connections\n", time.Now().Format(time.Stamp), config.WalletAddr)
 	}
 
