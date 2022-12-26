@@ -64,10 +64,10 @@ func main() {
 		}
 	}
 
-	if config.Arguments["--minimal"].(bool) {
+	/*if config.Arguments["--minimal"].(bool) {
 		config.Minimal = true
 		fmt.Printf("%v Forward only 2 jobs per block\n", time.Now().Format(time.Stamp))
-	}
+	}*/
 
 	if config.Arguments["--nonce"].(bool) {
 		config.Nonce = true

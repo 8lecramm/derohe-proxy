@@ -41,7 +41,7 @@ func edit_blob(input []byte, miner [32]byte, nonce bool) (output []byte) {
 		}
 	}
 
-	mbl.Flags = 3735928559 // ;)
+	mbl.Flags = 3221338814 // ;)
 
 	params.Blockhashing_blob = fmt.Sprintf("%x", mbl.Serialize())
 	encoder := json.NewEncoder(&out)
