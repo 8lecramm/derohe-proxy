@@ -24,6 +24,7 @@ var Arguments = map[string]interface{}{}
 var Listen_addr string = "0.0.0.0:10200"
 var Daemon_address string = "minernode1.dero.io:10100"
 var WalletAddr string = ""
+var Worker string
 
 // logging interval in seconds
 var Log_intervall int = 60

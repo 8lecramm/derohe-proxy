@@ -50,6 +50,7 @@ var Minis uint64
 var Rejected uint64
 var Orphans uint64
 var ModdedNode bool = false
+var noRepeat bool
 var Hashrate float64
 
 // proxy-client
@@ -106,12 +107,14 @@ func Start_client(w string) {
 				if params.Hansen33Mod {
 					fmt.Printf("%v Hansen33 Mod Mining Node Detected - Happy Mining\n", time.Now().Format(time.Stamp))
 				}
+			} else {
+				if !noRepeat {
+					noRepeat = true
+					fmt.Printf("%v Official Mining Node Detected - Happy Mining\n", time.Now().Format(time.Stamp))
+				}
 			}
 			ModdedNode = params.Hansen33Mod
 
-			if !ModdedNode {
-				fmt.Printf("%v Official Mining Node Detected - Happy Mining\n", time.Now().Format(time.Stamp))
-			}
 			if config.Minimal {
 				if params.Height != last_height || params.Difficultyuint64 != last_diff {
 					last_height = params.Height

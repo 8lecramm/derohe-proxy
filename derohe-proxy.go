@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,12 +44,29 @@ func main() {
 	}
 
 	if config.Arguments["--wallet-address"] != nil {
-		addr, err := globals.ParseValidateAddress(config.Arguments["--wallet-address"].(string))
+
+		// check for worker suffix
+		var parseWorker []string
+		var address string
+
+		if strings.Contains(config.Arguments["--wallet-address"].(string), ".") {
+			parseWorker = strings.Split(config.Arguments["--wallet-address"].(string), ".")
+			config.Worker = parseWorker[1]
+			address = parseWorker[0]
+		} else {
+			address = config.Arguments["--wallet-address"].(string)
+		}
+
+		addr, err := globals.ParseValidateAddress(address)
 		if err != nil {
 			fmt.Printf("%v Wallet address is invalid!\n", time.Now().Format(time.Stamp))
 		}
 		config.WalletAddr = addr.String()
-		fmt.Printf("%v Using wallet %s for all connections\n", time.Now().Format(time.Stamp), config.WalletAddr)
+		if config.Worker != "" {
+			fmt.Printf("%v Using wallet %s and name %s for all connections\n", time.Now().Format(time.Stamp), config.WalletAddr, config.Worker)
+		} else {
+			fmt.Printf("%v Using wallet %s for all connections\n", time.Now().Format(time.Stamp), config.WalletAddr)
+		}
 	}
 
 	if config.Arguments["--log-interval"] != nil {
@@ -88,7 +106,11 @@ func main() {
 	for proxy.CountMiners() < 1 {
 		time.Sleep(time.Second * 1)
 	}
-	go proxy.Start_client(proxy.Address)
+	if config.Worker == "" {
+		go proxy.Start_client(proxy.Address)
+	} else {
+		go proxy.Start_client(proxy.Address + "." + config.Worker)
+	}
 	//go proxy.SendUpdateToDaemon()
 
 	for {
@@ -113,6 +135,7 @@ func main() {
 			fmt.Printf("%v %d miners connected, IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
 		} else {
 			fmt.Printf("%v %d miners connected, Pool stats: IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
+			fmt.Printf("%v Shares submitted: %d\n", time.Now().Format(time.Stamp), proxy.Shares)
 		}
 		rwmutex.RLock()
 		for i := range proxy.Wallet_count {
