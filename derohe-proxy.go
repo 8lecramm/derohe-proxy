@@ -7,7 +7,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/deroproject/derohe/globals"
@@ -16,7 +15,6 @@ import (
 
 func main() {
 	var err error
-	var rwmutex sync.RWMutex
 
 	config.Arguments, err = docopt.Parse(config.Command_line, nil, true, "pre-alpha", false)
 
@@ -111,38 +109,35 @@ func main() {
 	} else {
 		go proxy.Start_client(proxy.Address + "." + config.Worker)
 	}
-	//go proxy.SendUpdateToDaemon()
 
 	for {
 		time.Sleep(time.Second * time.Duration(config.Log_intervall))
 
+		miners := proxy.CountMiners()
+
 		hash_rate_string := ""
 
-		switch {
-		case proxy.Hashrate > 1000000000000:
-			hash_rate_string = fmt.Sprintf("%.3f TH/s", float64(proxy.Hashrate)/1000000000000.0)
-		case proxy.Hashrate > 1000000000:
-			hash_rate_string = fmt.Sprintf("%.3f GH/s", float64(proxy.Hashrate)/1000000000.0)
-		case proxy.Hashrate > 1000000:
-			hash_rate_string = fmt.Sprintf("%.3f MH/s", float64(proxy.Hashrate)/1000000.0)
-		case proxy.Hashrate > 1000:
-			hash_rate_string = fmt.Sprintf("%.3f KH/s", float64(proxy.Hashrate)/1000.0)
-		case proxy.Hashrate > 0:
-			hash_rate_string = fmt.Sprintf("%d H/s", int(proxy.Hashrate))
+		if miners > 0 {
+			switch {
+			case proxy.Hashrate > 1000000000000:
+				hash_rate_string = fmt.Sprintf("%.3f TH/s", float64(proxy.Hashrate)/1000000000000.0)
+			case proxy.Hashrate > 1000000000:
+				hash_rate_string = fmt.Sprintf("%.3f GH/s", float64(proxy.Hashrate)/1000000000.0)
+			case proxy.Hashrate > 1000000:
+				hash_rate_string = fmt.Sprintf("%.3f MH/s", float64(proxy.Hashrate)/1000000.0)
+			case proxy.Hashrate > 1000:
+				hash_rate_string = fmt.Sprintf("%.3f KH/s", float64(proxy.Hashrate)/1000.0)
+			case proxy.Hashrate > 0:
+				hash_rate_string = fmt.Sprintf("%d H/s", int(proxy.Hashrate))
+			}
 		}
 
 		if !config.Pool_mode {
-			fmt.Printf("%v %d miners connected, IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
+			fmt.Printf("%v %d miners connected, IB:%d MB:%d MBR:%d MBO:%d\n", time.Now().Format(time.Stamp), miners, proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans)
 		} else {
-			fmt.Printf("%v %d miners connected, Pool stats: IB:%d MB:%d MBR:%d MBO:%d - MINING @ %s\n", time.Now().Format(time.Stamp), proxy.CountMiners(), proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans, hash_rate_string)
-			fmt.Printf("%v Shares submitted: %d\n", time.Now().Format(time.Stamp), proxy.Shares)
+			fmt.Printf("%v %d miners connected, Pool stats: IB:%d MB:%d MBR:%d MBO:%d\n", time.Now().Format(time.Stamp), miners, proxy.Blocks, proxy.Minis, proxy.Rejected, proxy.Orphans)
+			fmt.Printf("%v Shares submitted: %d, Hashrate: %s\n", time.Now().Format(time.Stamp), proxy.Shares, hash_rate_string)
 		}
-		rwmutex.RLock()
-		for i := range proxy.Wallet_count {
-			if proxy.Wallet_count[i] > 1 {
-				fmt.Printf("%v Wallet %v, %d miners\n", time.Now().Format(time.Stamp), i, proxy.Wallet_count[i])
-			}
-		}
-		rwmutex.RUnlock()
+		proxy.CountWallets()
 	}
 }

@@ -60,8 +60,11 @@ var client_list = map[*websocket.Conn]*user_session{}
 
 var miners_count int
 var Shares uint64
+var shareValue uint64
 var Wallet_count map[string]uint
 var Address string
+
+var rwmutex sync.RWMutex
 
 func Start_server() {
 	var err error
@@ -198,6 +201,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%v Incoming connection: %v (%v), Wallet: %v\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), worker, address)
 	} else {
 		fmt.Printf("%v Incoming connection: %v (%v)\n", time.Now().Format(time.Stamp), wsConn.RemoteAddr().String(), worker)
+		if len(client_list) == 1 {
+			Connected = time.Now().UnixMilli()
+			shareValue = 0
+		}
 	}
 }
 
@@ -214,31 +221,15 @@ func newUpgrader() *websocket.Upgrader {
 		client_list_mutex.Lock()
 		defer client_list_mutex.Unlock()
 
-		/*
-			var x MinerInfo_Params
-			if json.Unmarshal(data, &x); len(x.Wallet_Address) > 0 {
-
-				if x.Miner_Hashrate > 0 {
-					sess := client_list[c]
-					sess.hashrate = x.Miner_Hashrate
-					client_list[c] = sess
-				}
-
-				var NewHashRate float64
-				for _, s := range client_list {
-					NewHashRate += s.hashrate
-				}
-				Hashrate = NewHashRate
-
-				// Update miners information
-				return
-			} else {
-		*/
 		SendToDaemon(data)
 		if !config.Pool_mode {
 			fmt.Printf("%v Submitting result from miner: %v (%v), Wallet: %v\n", time.Now().Format(time.Stamp), c.RemoteAddr().String(), client_list[c].worker, client_list[c].address.String())
 		} else {
 			Shares++
+			shareValue += difficulty
+			if Connected > 0 {
+				Hashrate = shareValue / (uint64(time.Now().UnixMilli()-Connected) / 1000)
+			}
 		}
 		//}
 	})
@@ -252,6 +243,18 @@ func newUpgrader() *websocket.Upgrader {
 	})
 
 	return u
+}
+
+func CountWallets() {
+
+	rwmutex.RLock()
+	defer rwmutex.RUnlock()
+
+	for i := range Wallet_count {
+		if Wallet_count[i] > 1 {
+			fmt.Printf("%v Wallet %v, %d miners\n", time.Now().Format(time.Stamp), i, Wallet_count[i])
+		}
+	}
 }
 
 // taken unmodified from derohe repo

@@ -49,9 +49,10 @@ var Blocks uint64
 var Minis uint64
 var Rejected uint64
 var Orphans uint64
-var ModdedNode bool = false
-var noRepeat bool
-var Hashrate float64
+
+var Hashrate uint64
+var Connected int64
+var difficulty uint64
 
 // proxy-client
 func Start_client(w string) {
@@ -103,17 +104,9 @@ func Start_client(w string) {
 			Rejected = params.Rejected
 			Orphans = params.Orphans
 
-			if ModdedNode != params.Hansen33Mod {
-				if params.Hansen33Mod {
-					fmt.Printf("%v Hansen33 Mod Mining Node Detected - Happy Mining\n", time.Now().Format(time.Stamp))
-				}
-			} else {
-				if !noRepeat {
-					noRepeat = true
-					fmt.Printf("%v Official Mining Node Detected - Happy Mining\n", time.Now().Format(time.Stamp))
-				}
+			if config.Pool_mode {
+				difficulty = params.Difficultyuint64
 			}
-			ModdedNode = params.Hansen33Mod
 
 			if config.Minimal {
 				if params.Height != last_height || params.Difficultyuint64 != last_diff {
@@ -125,23 +118,6 @@ func Start_client(w string) {
 				go SendTemplateToNodes(recv_data)
 			}
 		}
-	}
-}
-
-func SendUpdateToDaemon() {
-
-	var count = 0
-	for {
-		if ModdedNode {
-			if count == 0 {
-				time.Sleep(60 * time.Second)
-			}
-
-			connection.conn.WriteJSON(MinerInfo_Params{Wallet_Address: Address, Miner_Tag: "", Miner_Hashrate: Hashrate})
-
-			count++
-		}
-		time.Sleep(10 * time.Second)
 	}
 }
 
